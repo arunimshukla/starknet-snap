@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMultiLanguage, useStarkNetSnap } from 'services';
-import { useAppSelector, useAppDispatch } from 'hooks/redux';
+import { useAppSelector, useAppDispatch, useCurrentAccount } from 'hooks';
 import Toastr from 'toastr2';
 
 import { Modal } from 'components/ui/atom/Modal';
@@ -24,6 +24,7 @@ export const DeployModalView = ({ address }: Props) => {
   const dispatch = useAppDispatch();
   const { deployAccount, waitForAccountCreation } = useStarkNetSnap();
   const { translate } = useMultiLanguage();
+  const { addressIndex } = useCurrentAccount();
 
   const [txnHash, setTxnHash] = useState('');
   const [stage, setStage] = useState(Stage.INIT);
@@ -33,7 +34,12 @@ export const DeployModalView = ({ address }: Props) => {
 
   const onDeploy = async () => {
     try {
-      const resp = await deployAccount(address, '0', chainId);
+      // Cairo 0 undeployed accounts must use the legacy deploy path so the
+      // counterfactual address (and ETH-funded balance) stay unchanged.
+      const resp = await deployAccount(chainId, {
+        addressIndex,
+        legacy: true,
+      });
 
       if (resp === false) {
         return;
